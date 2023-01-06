@@ -73,7 +73,7 @@ namespace TestsGenerator.Core
                 foreach (var parameter in constructor.ParameterList.Parameters)
                 {
                     var paramSection = GenerateParameterCreationSection(parameter);
-                    initializations.Add(paramSection.InitializationsExpression);
+                    initializations.Add(paramSection.Initialization);
 
                     constructorArgs.Add(paramSection.Argument);
                     constructorArgs.Add(SyntaxFactory.Token(SyntaxKind.CommaToken));
@@ -181,7 +181,151 @@ namespace TestsGenerator.Core
                                     SyntaxFactory.Token(SyntaxKind.DefaultKeyword)))))));
             return initialExpression;
         }
+
+        private static MemberDeclarationSyntax GenerateMethod(string methodName, string classVariableName, MethodDeclarationSyntax method)
+        {
+            List<StatementSyntax> statements = new List<StatementSyntax>();
+            List<SyntaxNodeOrToken> methodArgs = new List<SyntaxNodeOrToken>();
+            string actualVarName = "actual";
+            string expectedVarName = "expected";
+
+            if (method.ParameterList.Parameters.Count > 0)
+            {
+                foreach (ParameterSyntax parameter in method.ParameterList.Parameters)
+                {
+                    var section = GenerateParameterCreationSection(parameter);
+                    statements.Add(section.Initialization);
+
+                    methodArgs.Add(section.Argument);
+                    methodArgs.Add(SyntaxFactory.Token(SyntaxKind.CommaToken));
+                }
+
+                methodArgs.RemoveAt(methodArgs.Count - 1);
+            }
+
+            if (method.ReturnType is PredefinedTypeSyntax predifRetType && predifRetType.Keyword.ValueText == "void")
+            {
+                var actualStatement = SyntaxFactory.ExpressionStatement(
+                    SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.MemberAccessExpression(
+                            SyntaxKind.SimpleMemberAccessExpression,
+                            SyntaxFactory.IdentifierName(classVariableName),
+                            SyntaxFactory.IdentifierName(method.Identifier.ValueText)))
+                    .WithArgumentList(
+                        SyntaxFactory.ArgumentList(
+                            SyntaxFactory.SeparatedList<ArgumentSyntax>(
+                                new SyntaxNodeOrTokenList(methodArgs)))));
+                statements.Add(actualStatement);
+            }
+            else
+            {
+                string retTypeName;
+                if (method.ReturnType is PredefinedTypeSyntax predTypeSyntax)
+                    retTypeName = predTypeSyntax.Keyword.ValueText;
+                else if (method.ReturnType is IdentifierNameSyntax nameIdentif)
+                    retTypeName = nameIdentif.Identifier.ValueText;
+                else
+                    retTypeName = "object";
+
+                var actualStatement = SyntaxFactory.LocalDeclarationStatement(
+                    SyntaxFactory.VariableDeclaration(
+                        SyntaxFactory.IdentifierName(retTypeName))
+                    .WithVariables(
+                        SyntaxFactory.SingletonSeparatedList(
+                            SyntaxFactory.VariableDeclarator(
+                                SyntaxFactory.Identifier(actualVarName))
+                            .WithInitializer(
+                                SyntaxFactory.EqualsValueClause(
+                                    SyntaxFactory.InvocationExpression(
+                                        SyntaxFactory.MemberAccessExpression(
+                                            SyntaxKind.SimpleMemberAccessExpression,
+                                            SyntaxFactory.IdentifierName(classVariableName),
+                                            SyntaxFactory.IdentifierName(method.Identifier.ValueText)))
+                                    .WithArgumentList(
+                                        SyntaxFactory.ArgumentList(
+                                            SyntaxFactory.SeparatedList<ArgumentSyntax>(
+                                                new SyntaxNodeOrTokenList(methodArgs)))))))));
+                statements.Add(actualStatement);
+
+                var expectedVarDeclStatement = GenerateLocalDeclarationStatement(retTypeName, expectedVarName);
+                statements.Add(expectedVarDeclStatement);
+
+                var resultAssertionStatement = SyntaxFactory.ExpressionStatement(
+                    SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.MemberAccessExpression(
+                            SyntaxKind.SimpleMemberAccessExpression,
+                            SyntaxFactory.IdentifierName("Assert"),
+                            SyntaxFactory.IdentifierName("That")))
+                    .WithArgumentList(
+                        SyntaxFactory.ArgumentList(
+                            SyntaxFactory.SeparatedList<ArgumentSyntax>(
+                                new SyntaxNodeOrToken[]{
+                                    SyntaxFactory.Argument(
+                                        SyntaxFactory.IdentifierName(actualVarName)),
+                                    SyntaxFactory.Token(SyntaxKind.CommaToken),
+                                    SyntaxFactory.Argument(
+                                        SyntaxFactory.InvocationExpression(
+                                            SyntaxFactory.MemberAccessExpression(
+                                                SyntaxKind.SimpleMemberAccessExpression,
+                                                SyntaxFactory.IdentifierName("Is"),
+                                                SyntaxFactory.IdentifierName("EqualTo")))
+                                        .WithArgumentList(
+                                            SyntaxFactory.ArgumentList(
+                                                SyntaxFactory.SingletonSeparatedList<ArgumentSyntax>(
+                                                    SyntaxFactory.Argument(
+                                                        SyntaxFactory.IdentifierName(expectedVarName))))))}))));
+
+                statements.Add(resultAssertionStatement);
+            }
+
+            var assertFailStatement = SyntaxFactory.ExpressionStatement(
+                SyntaxFactory.InvocationExpression(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        SyntaxFactory.IdentifierName("Assert"),
+                        SyntaxFactory.IdentifierName("Fail")))
+                .WithArgumentList(
+                    SyntaxFactory.ArgumentList(
+                        SyntaxFactory.SingletonSeparatedList(
+                            SyntaxFactory.Argument(
+                                SyntaxFactory.LiteralExpression(
+                                    SyntaxKind.StringLiteralExpression,
+                                    SyntaxFactory.Literal("autogenerated")))))));
+
+            statements.Add(assertFailStatement);
+
+            var methodDeclaration = SyntaxFactory.MethodDeclaration(
+                SyntaxFactory.PredefinedType(
+                    SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
+                SyntaxFactory.Identifier(methodName))
+            .WithAttributeLists(
+                SyntaxFactory.SingletonList(
+                    SyntaxFactory.AttributeList(
+                        SyntaxFactory.SingletonSeparatedList(
+                            SyntaxFactory.Attribute(
+                                SyntaxFactory.IdentifierName("Test"))))))
+            .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+            .WithBody(SyntaxFactory.Block(statements));
+
+            return methodDeclaration;
+        }
+
+        private static List<MemberDeclarationSyntax> GenerateMethods(string classVariableName, List<MethodDeclarationSyntax> methods)
+        {
+            List<MemberDeclarationSyntax> members = new List<MemberDeclarationSyntax>(methods.Count);
+            var generator = new MethodNameGenerator(methods);
+
+            foreach (var method in methods)
+            {
+                string methodName = generator.GenerateMethodName(method.Identifier.ValueText);
+                var methodSection = GenerateMethod(methodName, classVariableName, method);
+                members.Add(methodSection);
+            }
+            return members;
+        }
     }
+
+    
 
 
 
