@@ -123,6 +123,64 @@ namespace TestsGenerator.Core
 
             return (testClassObjectName, setup);
         }
+
+        private static (ArgumentSyntax Argument, StatementSyntax Initialization) GenerateParameterCreationSection(ParameterSyntax parameter)
+        {
+            StatementSyntax inializationExpr;
+            ArgumentSyntax constrArgument;
+            string objectName = $"{parameter.Identifier.Text}Fake";
+            string type = parameter.Type.ToString();
+
+            if (type.StartsWith('I'))
+            {
+                inializationExpr = SyntaxFactory.LocalDeclarationStatement(
+                    SyntaxFactory.VariableDeclaration(
+                        SyntaxFactory.IdentifierName(type))
+                    .WithVariables(
+                        SyntaxFactory.SingletonSeparatedList(
+                            SyntaxFactory.VariableDeclarator(
+                                SyntaxFactory.Identifier(objectName))
+                            .WithInitializer(
+                                SyntaxFactory.EqualsValueClause(
+                                    SyntaxFactory.ObjectCreationExpression(
+                                        SyntaxFactory.GenericName(
+                                            SyntaxFactory.Identifier("Mock"))
+                                        .WithTypeArgumentList(
+                                            SyntaxFactory.TypeArgumentList(
+                                                SyntaxFactory.SingletonSeparatedList<TypeSyntax>(
+                                                    SyntaxFactory.IdentifierName(type)))))
+                                    .WithArgumentList(
+                                        SyntaxFactory.ArgumentList()))))));
+                constrArgument = SyntaxFactory.Argument(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        SyntaxFactory.IdentifierName(objectName),
+                        SyntaxFactory.IdentifierName("Object")));
+            }
+            else
+            {
+                inializationExpr = GenerateLocalDeclarationStatement(type, objectName);
+                constrArgument = SyntaxFactory.Argument(SyntaxFactory.IdentifierName(objectName));
+            }
+            return (constrArgument, inializationExpr);
+        }
+
+        private static LocalDeclarationStatementSyntax GenerateLocalDeclarationStatement(string type, string variableName)
+        {
+            var initialExpression = SyntaxFactory.LocalDeclarationStatement(
+                SyntaxFactory.VariableDeclaration(
+                    SyntaxFactory.IdentifierName(type))
+                .WithVariables(
+                    SyntaxFactory.SingletonSeparatedList(
+                        SyntaxFactory.VariableDeclarator(
+                            SyntaxFactory.Identifier(variableName))
+                        .WithInitializer(
+                            SyntaxFactory.EqualsValueClause(
+                                SyntaxFactory.LiteralExpression(
+                                    SyntaxKind.DefaultLiteralExpression,
+                                    SyntaxFactory.Token(SyntaxKind.DefaultKeyword)))))));
+            return initialExpression;
+        }
     }
 
 
