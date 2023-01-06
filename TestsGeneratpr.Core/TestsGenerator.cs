@@ -1,12 +1,20 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.ObjectModel;
 
 namespace TestsGenerator.Core
 {
     public class TestsGenerator : ITestsGenerator
     {
-        public List<GenerationResult> Generate(string file)
+        private readonly Dictionary<int, string> _generationTemplateDict = new Dictionary<int, string>()
+        {
+            {1, "NUnit.Framework" },
+            {2, "Xunit" },
+            {3, "Microsoft.VisualStudio.TestTools.UnitTesting" }
+        };
+
+        public List<GenerationResult> Generate(string file, int generationTemplate)
         {
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(file);
             var root = syntaxTree.GetCompilationUnitRoot();
@@ -15,20 +23,32 @@ namespace TestsGenerator.Core
 
             foreach (var c in classes)
             {
-                var tests = GerenerateSignleClassTests(c);
+                var tests = GerenerateSignleClassTests(c, generationTemplate);
                 generResults.Add(tests);
             }
             return generResults;
         }
 
-        private static GenerationResult GerenerateSignleClassTests(ClassDeclarationSyntax syntax)
+        private static GenerationResult GerenerateSignleClassTests(ClassDeclarationSyntax syntax, int generationTemplate)
         {
+            Dictionary<int, string> generationTemplateDict = new Dictionary<int, string>()
+            {
+                {1, "NUnit.Framework" },
+                {2, "Xunit" },
+                {3, "Microsoft.VisualStudio.TestTools.UnitTesting" }
+            };
+            Dictionary<int, string> testClassDeclDict = new Dictionary<int, string>()
+            {
+                {1, "TestFixture" },
+                {2, "" },
+                {3, "TestClass" }
+            };
             string className = syntax.Identifier.Text;
             List<MethodDeclarationSyntax> methods = syntax.GetPublicMethods();
             ConstructorDeclarationSyntax constructor = syntax.GetConstructorWithMaxArgumentsCount();
 
-            var setupSection = GenerateSetup(className, constructor);
-            var methodsSection = GenerateMethods(setupSection.ClassVariableName, methods);
+            var setupSection = GenerateSetup(className, constructor, generationTemplate);
+            var methodsSection = GenerateMethods(setupSection.ClassVariableName, methods, generationTemplate);
 
 
             var members = new List<MemberDeclarationSyntax>(setupSection.SetupSection);
@@ -39,7 +59,7 @@ namespace TestsGenerator.Core
                     .WithUsings(
                         SyntaxFactory.List(
                             new UsingDirectiveSyntax[] {
-                        SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("NUnit.Framework")) }))
+                        SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName($"{generationTemplateDict[generationTemplate]}")) }))
                     .WithMembers(
                         SyntaxFactory.SingletonList<MemberDeclarationSyntax>(
                             SyntaxFactory.NamespaceDeclaration(
@@ -52,7 +72,7 @@ namespace TestsGenerator.Core
                                             SyntaxFactory.AttributeList(
                                                 SyntaxFactory.SingletonSeparatedList(
                                                     SyntaxFactory.Attribute(
-                                                        SyntaxFactory.IdentifierName("TestFixture"))))))
+                                                        SyntaxFactory.IdentifierName($"{testClassDeclDict[generationTemplate]}"))))))
                                     .WithModifiers(
                                         SyntaxFactory.TokenList(
                                             SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
@@ -62,8 +82,21 @@ namespace TestsGenerator.Core
             return new GenerationResult(className, syntaxTree.ToString());
         }
 
-        private static (string ClassVariableName, List<MemberDeclarationSyntax> SetupSection) GenerateSetup(string className, ConstructorDeclarationSyntax constructor)
+        private static (string ClassVariableName, List<MemberDeclarationSyntax> SetupSection) GenerateSetup(string className, ConstructorDeclarationSyntax constructor, int generationTemplate)
         {
+            Dictionary<int, string> setupDeclDict = new Dictionary<int, string>
+            {
+                {1, "SetUp" },
+                {2, "" },
+                {3, "" }
+            };
+            Dictionary<int, string> constrDeclDict = new Dictionary<int, string>
+            {
+                {1, "Setup" },
+                {2, className },
+                {3, className }
+            };
+            
             string testClassObjectName = $"_test{className}";
             List<StatementSyntax> initializations = new List<StatementSyntax>();
             List<SyntaxNodeOrToken> constructorArgs = new List<SyntaxNodeOrToken>();
@@ -110,13 +143,13 @@ namespace TestsGenerator.Core
                 SyntaxFactory.MethodDeclaration(
                     SyntaxFactory.PredefinedType(
                         SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
-                    SyntaxFactory.Identifier("SetUp"))
+                    SyntaxFactory.Identifier($"{constrDeclDict[generationTemplate]}"))
                 .WithAttributeLists(
                     SyntaxFactory.SingletonList(
                         SyntaxFactory.AttributeList(
                             SyntaxFactory.SingletonSeparatedList(
                                 SyntaxFactory.Attribute(
-                                    SyntaxFactory.IdentifierName("SetUp"))))))
+                                    SyntaxFactory.IdentifierName($"{setupDeclDict[generationTemplate]}"))))))
                     .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
                     .WithBody(SyntaxFactory.Block(initializations))
             };
@@ -182,8 +215,14 @@ namespace TestsGenerator.Core
             return initialExpression;
         }
 
-        private static MemberDeclarationSyntax GenerateMethod(string methodName, string classVariableName, MethodDeclarationSyntax method)
+        private static MemberDeclarationSyntax GenerateMethod(string methodName, string classVariableName, MethodDeclarationSyntax method, int generationTemplate)
         {
+            Dictionary<int, string> testMetodDecl = new Dictionary<int, string>
+            {
+                {1, "Test" },
+                {2, "Fact" },
+                {3, "TestMethod" }
+            };
             List<StatementSyntax> statements = new List<StatementSyntax>();
             List<SyntaxNodeOrToken> methodArgs = new List<SyntaxNodeOrToken>();
             string actualVarName = "actual";
@@ -303,14 +342,14 @@ namespace TestsGenerator.Core
                     SyntaxFactory.AttributeList(
                         SyntaxFactory.SingletonSeparatedList(
                             SyntaxFactory.Attribute(
-                                SyntaxFactory.IdentifierName("Test"))))))
+                                SyntaxFactory.IdentifierName($"{testMetodDecl[generationTemplate]}"))))))
             .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
             .WithBody(SyntaxFactory.Block(statements));
 
             return methodDeclaration;
         }
 
-        private static List<MemberDeclarationSyntax> GenerateMethods(string classVariableName, List<MethodDeclarationSyntax> methods)
+        private static List<MemberDeclarationSyntax> GenerateMethods(string classVariableName, List<MethodDeclarationSyntax> methods, int generationTemplate)
         {
             List<MemberDeclarationSyntax> members = new List<MemberDeclarationSyntax>(methods.Count);
             var generator = new MethodNameGenerator(methods);
@@ -318,7 +357,7 @@ namespace TestsGenerator.Core
             foreach (var method in methods)
             {
                 string methodName = generator.GenerateMethodName(method.Identifier.ValueText);
-                var methodSection = GenerateMethod(methodName, classVariableName, method);
+                var methodSection = GenerateMethod(methodName, classVariableName, method, generationTemplate);
                 members.Add(methodSection);
             }
             return members;

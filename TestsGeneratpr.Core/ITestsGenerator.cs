@@ -8,6 +8,6 @@ namespace TestsGenerator.Core
 {
     public interface ITestsGenerator
     {
-        public List<GenerationResult> Generate(string file);
+        public List<GenerationResult> Generate(string file, int generationTemplate);
     }
 }

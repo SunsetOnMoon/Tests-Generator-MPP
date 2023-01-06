@@ -43,8 +43,12 @@ try
         Directory.Delete(outputDir, true);
     Directory.CreateDirectory(outputDir);
 
+    int generationTemplate;
+    Console.WriteLine("Enter template for test generation:\n1 - NUnit\n2 - XUnit\n3 - MSTest");
+    generationTemplate = Convert.ToInt32(Console.ReadLine());
+    
     var generator = new TestsGenerator.Core.TestsGenerator();
-    DataflowPipeline dataflowPipeline = new DataflowPipeline(outputDir, maxFilesRead, maxFilesWrite, maxFilesParse);
+    DataflowPipeline dataflowPipeline = new DataflowPipeline(outputDir, maxFilesRead, maxFilesWrite, maxFilesParse, generationTemplate);
     TransformBlock<string, string> startPoint = dataflowPipeline.GenerateDataflowPipeline(generator);
 
     AddSubdirToQuery(inputDir, startPoint);

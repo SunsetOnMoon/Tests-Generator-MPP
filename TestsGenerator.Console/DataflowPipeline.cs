@@ -9,8 +9,9 @@ namespace TestsGenerator.Console
         private readonly int _maxFilesRead;
         private readonly int _maxFilesWrite;
         private readonly int _maxFilesParse;
+        private readonly int _generationTemplate;
 
-        public DataflowPipeline(string outputDir, int maxFilesRead, int maxFilesWrite, int maxFilesParse)
+        public DataflowPipeline(string outputDir, int maxFilesRead, int maxFilesWrite, int maxFilesParse, int generationTemplate)
         {
             if (maxFilesRead <= 0)
                 throw new ArgumentException($"Should be >= 0, {nameof(maxFilesRead)}");
@@ -23,6 +24,7 @@ namespace TestsGenerator.Console
             _maxFilesRead = maxFilesRead;
             _maxFilesWrite = maxFilesWrite;
             _maxFilesParse = maxFilesParse;
+            _generationTemplate = generationTemplate;
         }
 
         public TransformBlock<string, string> GenerateDataflowPipeline(ITestsGenerator generator)
@@ -35,7 +37,7 @@ namespace TestsGenerator.Console
                 });
 
             TransformManyBlock<string, GenerationResult> testsGenerate = new TransformManyBlock<string, GenerationResult>(
-                data => generator.Generate(data),
+                data => generator.Generate(data, _generationTemplate),
                 new ExecutionDataflowBlockOptions
                 {
                     MaxDegreeOfParallelism = _maxFilesParse
