@@ -37,13 +37,12 @@ namespace TestsGenerator.Core
                 {2, "Xunit" },
                 {3, "Microsoft.VisualStudio.TestTools.UnitTesting" }
             };
-            Dictionary<int, string> testClassDeclDict = new Dictionary<int, string>()
-            {
-                {1, "TestFixture" },
-                {2, "" },
-                {3, "TestClass" }
-            };
-            string className = syntax.Identifier.Text;
+            //{
+            //    {1, "TestFixture" },
+            //    {2, "" },
+            //    {3, "TestClass" }
+            //};
+            string className = syntax.Identifier.Text + "Tests";
             List<MethodDeclarationSyntax> methods = syntax.GetPublicMethods();
             ConstructorDeclarationSyntax constructor = syntax.GetConstructorWithMaxArgumentsCount();
 
@@ -53,6 +52,43 @@ namespace TestsGenerator.Core
 
             var members = new List<MemberDeclarationSyntax>(setupSection.SetupSection);
             members.AddRange(methodsSection);
+
+            Dictionary<int, Func<ClassDeclarationSyntax>> testClassDeclDict = new Dictionary<int, Func<ClassDeclarationSyntax>>()
+            {
+                {1,  () => { return SyntaxFactory.ClassDeclaration($"{className}")
+                                    .WithAttributeLists(
+                                        SyntaxFactory.SingletonList(
+                                            SyntaxFactory.AttributeList(
+                                                SyntaxFactory.SingletonSeparatedList(
+                                                    SyntaxFactory.Attribute(
+                                                        SyntaxFactory.IdentifierName("TestFixture"))))))
+                                    .WithModifiers(
+                                        SyntaxFactory.TokenList(
+                                            SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+                                    .WithMembers(
+                                        SyntaxFactory.List(members)); } },
+                {2,  () =>  { return SyntaxFactory.ClassDeclaration($"{className}")
+                                    .WithModifiers(
+                                        SyntaxFactory.TokenList(
+                                            SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+                                    .WithMembers(
+                                        SyntaxFactory.List(members)); } },
+                {3,  () => { return SyntaxFactory.ClassDeclaration($"{className}")
+                                    .WithAttributeLists(
+                                        SyntaxFactory.SingletonList(
+                                            SyntaxFactory.AttributeList(
+                                                SyntaxFactory.SingletonSeparatedList(
+                                                    SyntaxFactory.Attribute(
+                                                        SyntaxFactory.IdentifierName("TestClass"))))))
+                                    .WithModifiers(
+                                        SyntaxFactory.TokenList(
+                                            SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+                                    .WithMembers(
+                                        SyntaxFactory.List(members));
+        }
+    }
+
+            };
 
             SyntaxTree syntaxTree = CSharpSyntaxTree.Create(
                 SyntaxFactory.CompilationUnit()
@@ -66,37 +102,14 @@ namespace TestsGenerator.Core
                                 SyntaxFactory.IdentifierName("Tests"))
                             .WithMembers(
                                 SyntaxFactory.SingletonList<MemberDeclarationSyntax>(
-                                    SyntaxFactory.ClassDeclaration($"{className}Tests")
-                                    .WithAttributeLists(
-                                        SyntaxFactory.SingletonList(
-                                            SyntaxFactory.AttributeList(
-                                                SyntaxFactory.SingletonSeparatedList(
-                                                    SyntaxFactory.Attribute(
-                                                        SyntaxFactory.IdentifierName($"{testClassDeclDict[generationTemplate]}"))))))
-                                    .WithModifiers(
-                                        SyntaxFactory.TokenList(
-                                            SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
-                                    .WithMembers(
-                                        SyntaxFactory.List(members))))))
+                                    testClassDeclDict[generationTemplate]()
+                                    ))))
                     .NormalizeWhitespace());
             return new GenerationResult(className, syntaxTree.ToString());
         }
-
+     
         private static (string ClassVariableName, List<MemberDeclarationSyntax> SetupSection) GenerateSetup(string className, ConstructorDeclarationSyntax constructor, int generationTemplate)
-        {
-            Dictionary<int, string> setupDeclDict = new Dictionary<int, string>
-            {
-                {1, "SetUp" },
-                {2, "" },
-                {3, "" }
-            };
-            Dictionary<int, string> constrDeclDict = new Dictionary<int, string>
-            {
-                {1, "Setup" },
-                {2, className },
-                {3, className }
-            };
-            
+        {            
             string testClassObjectName = $"_test{className}";
             List<StatementSyntax> initializations = new List<StatementSyntax>();
             List<SyntaxNodeOrToken> constructorArgs = new List<SyntaxNodeOrToken>();
@@ -127,6 +140,33 @@ namespace TestsGenerator.Core
                                 SyntaxFactory.SeparatedList<ArgumentSyntax>(
                                     new SyntaxNodeOrTokenList(constructorArgs)))))));
 
+            Dictionary<int, Func<MemberDeclarationSyntax>> setupDeclDict = new Dictionary<int, Func<MemberDeclarationSyntax>>
+            {
+                {1, () => {return                 SyntaxFactory.MethodDeclaration(
+                    SyntaxFactory.PredefinedType(
+                        SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
+                    SyntaxFactory.Identifier($"SetUp"))
+                .WithAttributeLists(
+                    SyntaxFactory.SingletonList(
+                        SyntaxFactory.AttributeList(
+                            SyntaxFactory.SingletonSeparatedList(
+                                SyntaxFactory.Attribute(
+                                    SyntaxFactory.IdentifierName("SetUp"))))
+                        ))
+                .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+                    .WithBody(SyntaxFactory.Block(initializations)); } },
+                {2, () => { return SyntaxFactory.ConstructorDeclaration(
+                                SyntaxFactory.Identifier(className))
+                                    //SyntaxFactory.IdentifierName($"{setupDeclDict.TryGetValue}"))))))
+                    .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+                    .WithBody(SyntaxFactory.Block(initializations)); } },
+                {3, () => { return SyntaxFactory.ConstructorDeclaration(
+                                SyntaxFactory.Identifier(className))
+                                    //SyntaxFactory.IdentifierName($"{setupDeclDict.TryGetValue}"))))))
+                    .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+                    .WithBody(SyntaxFactory.Block(initializations)); } }
+            };
+
             List<MemberDeclarationSyntax> setup = new List<MemberDeclarationSyntax>()
             {
                 SyntaxFactory.FieldDeclaration(
@@ -139,19 +179,8 @@ namespace TestsGenerator.Core
                 .WithModifiers(
                     SyntaxFactory.TokenList(
                         SyntaxFactory.Token(SyntaxKind.PrivateKeyword))),
-
-                SyntaxFactory.MethodDeclaration(
-                    SyntaxFactory.PredefinedType(
-                        SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
-                    SyntaxFactory.Identifier($"{constrDeclDict[generationTemplate]}"))
-                .WithAttributeLists(
-                    SyntaxFactory.SingletonList(
-                        SyntaxFactory.AttributeList(
-                            SyntaxFactory.SingletonSeparatedList(
-                                SyntaxFactory.Attribute(
-                                    SyntaxFactory.IdentifierName($"{setupDeclDict[generationTemplate]}"))))))
-                    .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
-                    .WithBody(SyntaxFactory.Block(initializations))
+                setupDeclDict[generationTemplate]()
+                    
             };
 
             return (testClassObjectName, setup);
