@@ -2,7 +2,7 @@
 
 namespace TestsGenerator.Core
 {
-    internal static class CompilationUnitSyntaxExtensions
+    public static class CompilationUnitSyntaxExtensions
     {
         public static List<ClassDeclarationSyntax> GetClasses(this CompilationUnitSyntax root) =>
             root.DescendantNodes()

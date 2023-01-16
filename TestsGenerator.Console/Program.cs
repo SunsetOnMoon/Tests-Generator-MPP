@@ -5,8 +5,8 @@ using TestsGenerator.Core;
 
 string[] arguments = new string[]
 {
-    "C:\\Work\\5 semester\\MPP\\MPP\\DirectoryScanner",
-    "C:\\Work\\5 semester\\MPP\\MPP\\GenerationResult",
+    "C:\\Work\\5 semester\\MPP\\MPP\\TestsGenerator\\TestsGeneratpr.Core",
+    "C:\\Work\\5 semester\\MPP\\MPP\\TestsGenerator\\TestsGenerator.Tests\\Tests",
     "1", "1", "1"
 };
 
@@ -47,7 +47,7 @@ try
     Console.WriteLine("Enter template for test generation:\n1 - NUnit\n2 - XUnit\n3 - MSTest");
     generationTemplate = Convert.ToInt32(Console.ReadLine());
     
-    var generator = new TestsGenerator.Core.TestsGenerator();
+    var generator = new TestsGenerator.Core.TestGenerator();
     DataflowPipeline dataflowPipeline = new DataflowPipeline(outputDir, maxFilesRead, maxFilesWrite, maxFilesParse, generationTemplate);
     TransformBlock<string, string> startPoint = dataflowPipeline.GenerateDataflowPipeline(generator);
 

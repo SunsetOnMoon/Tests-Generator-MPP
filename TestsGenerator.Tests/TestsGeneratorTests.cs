@@ -1,3 +1,4 @@
+using Xunit;
 using TestsGenerator.Core;
 namespace TestsGenerator.Tests
 {

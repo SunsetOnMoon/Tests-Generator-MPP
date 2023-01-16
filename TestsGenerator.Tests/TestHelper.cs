@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-
+using Xunit;
 namespace TestsGenerator.Tests
 {
     public static class TestHelper

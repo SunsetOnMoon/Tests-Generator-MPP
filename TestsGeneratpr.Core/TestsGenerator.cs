@@ -5,7 +5,7 @@ using System.Collections.ObjectModel;
 
 namespace TestsGenerator.Core
 {
-    public class TestsGenerator : ITestsGenerator
+    public class TestGenerator : ITestsGenerator
     {
         private readonly Dictionary<int, string> _generationTemplateDict = new Dictionary<int, string>()
         {
@@ -42,7 +42,8 @@ namespace TestsGenerator.Core
             //    {2, "" },
             //    {3, "TestClass" }
             //};
-            string className = syntax.Identifier.Text + "Tests";
+            string className = syntax.Identifier.Text;
+            string modifs = syntax.Modifiers.ToString();
             List<MethodDeclarationSyntax> methods = syntax.GetPublicMethods();
             ConstructorDeclarationSyntax constructor = syntax.GetConstructorWithMaxArgumentsCount();
 
@@ -55,7 +56,7 @@ namespace TestsGenerator.Core
 
             Dictionary<int, Func<ClassDeclarationSyntax>> testClassDeclDict = new Dictionary<int, Func<ClassDeclarationSyntax>>()
             {
-                {1,  () => { return SyntaxFactory.ClassDeclaration($"{className}")
+                {1,  () => { return SyntaxFactory.ClassDeclaration($"{className}Tests")
                                     .WithAttributeLists(
                                         SyntaxFactory.SingletonList(
                                             SyntaxFactory.AttributeList(
@@ -67,13 +68,13 @@ namespace TestsGenerator.Core
                                             SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
                                     .WithMembers(
                                         SyntaxFactory.List(members)); } },
-                {2,  () =>  { return SyntaxFactory.ClassDeclaration($"{className}")
+                {2,  () =>  { return SyntaxFactory.ClassDeclaration($"{className}Tests")
                                     .WithModifiers(
                                         SyntaxFactory.TokenList(
                                             SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
                                     .WithMembers(
                                         SyntaxFactory.List(members)); } },
-                {3,  () => { return SyntaxFactory.ClassDeclaration($"{className}")
+                {3,  () => { return SyntaxFactory.ClassDeclaration($"{className}Tests")
                                     .WithAttributeLists(
                                         SyntaxFactory.SingletonList(
                                             SyntaxFactory.AttributeList(
@@ -95,7 +96,13 @@ namespace TestsGenerator.Core
                     .WithUsings(
                         SyntaxFactory.List(
                             new UsingDirectiveSyntax[] {
-                        SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName($"{generationTemplateDict[generationTemplate]}")) }))
+                        SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName($"{generationTemplateDict[generationTemplate]}")),
+                            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Moq")),
+                            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Microsoft.CodeAnalysis.CSharp.Syntax")),
+                            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Microsoft.CodeAnalysis.CSharp")),
+                            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Microsoft.CodeAnalysis")),
+                            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("TestsGenerator.Core"))}))
+                        
                     .WithMembers(
                         SyntaxFactory.SingletonList<MemberDeclarationSyntax>(
                             SyntaxFactory.NamespaceDeclaration(
@@ -110,7 +117,7 @@ namespace TestsGenerator.Core
      
         private static (string ClassVariableName, List<MemberDeclarationSyntax> SetupSection) GenerateSetup(string className, ConstructorDeclarationSyntax constructor, int generationTemplate)
         {            
-            string testClassObjectName = $"_test{className}";
+            string testClassObjectName = $"_test{className}Tests";
             List<StatementSyntax> initializations = new List<StatementSyntax>();
             List<SyntaxNodeOrToken> constructorArgs = new List<SyntaxNodeOrToken>();
 
@@ -178,7 +185,7 @@ namespace TestsGenerator.Core
                                 SyntaxFactory.Identifier(testClassObjectName)))))
                 .WithModifiers(
                     SyntaxFactory.TokenList(
-                        SyntaxFactory.Token(SyntaxKind.PrivateKeyword))),
+                        SyntaxFactory.Token((SyntaxKind.PrivateKeyword)))),
                 setupDeclDict[generationTemplate]()
                     
             };
@@ -397,7 +404,7 @@ namespace TestsGenerator.Core
 
 
 
-    internal class MethodNameGenerator
+    public class MethodNameGenerator
     {
         private readonly Dictionary<string, MethodNameGenerationInfo> _methods;
 

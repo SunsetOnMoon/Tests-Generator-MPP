@@ -2,7 +2,7 @@
 
 namespace TestsGenerator.Core
 {
-    internal static class ClassDeclarationSyntaxExtensions
+    public static class ClassDeclarationSyntaxExtensions
     {
         public static ConstructorDeclarationSyntax GetConstructorWithMaxArgumentsCount(this ClassDeclarationSyntax syntax) =>
             syntax.Members
