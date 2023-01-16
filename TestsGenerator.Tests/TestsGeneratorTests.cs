@@ -4,7 +4,7 @@ namespace TestsGenerator.Tests
 {
     public class TestsGeneratorTests
     {
-        private readonly ITestsGenerator _generator = new TestsGenerator.Core.TestsGenerator();
+        private readonly ITestsGenerator _generator = new TestsGenerator.Core.TestGenerator();
 
         [Fact]
         public void Generate_Returns3TestClasses()
@@ -31,12 +31,12 @@ namespace TestsGenerator.Tests
 
             var fields = TestHelper.GetFields(actual);
             Assert.Single(fields);
-            Assert.Equal("private MyClassTests _testMyClassTests;", fields.First().ToString());
+            Assert.Equal("private MyClass _testMyClassTests;", fields.First().ToString());
             Assert.NotNull(method.Body);
             Assert.Equal(3, method.Body!.Statements.Count);
             Assert.Equal("string nameFake = default;", method.Body!.Statements[0].ToString());
             Assert.Equal("int ageFake = default;", method.Body!.Statements[1].ToString());
-            Assert.Equal("_testMyClassTests = new MyClassTests(nameFake, ageFake);", method.Body!.Statements[2].ToString());
+            Assert.Equal("_testMyClassTests = new MyClass(nameFake, ageFake);", method.Body!.Statements[2].ToString());
         }
 
         [Theory]

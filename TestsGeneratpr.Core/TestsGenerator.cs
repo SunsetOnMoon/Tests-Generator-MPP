@@ -47,13 +47,22 @@ namespace TestsGenerator.Core
             List<MethodDeclarationSyntax> methods = syntax.GetPublicMethods();
             ConstructorDeclarationSyntax constructor = syntax.GetConstructorWithMaxArgumentsCount();
 
-            var setupSection = GenerateSetup(className, constructor, generationTemplate);
-            var methodsSection = GenerateMethods(setupSection.ClassVariableName, methods, generationTemplate);
+            List<MemberDeclarationSyntax> members;
+            if (!modifs.Contains("static"))
+            {
+                var setupSection = GenerateSetup(className, constructor, generationTemplate);
+                var methodsSection = GenerateMethods(setupSection.ClassVariableName, methods, generationTemplate);
 
 
-            var members = new List<MemberDeclarationSyntax>(setupSection.SetupSection);
-            members.AddRange(methodsSection);
-
+                members = new List<MemberDeclarationSyntax>(setupSection.SetupSection);
+                members.AddRange(methodsSection);
+            }
+            else
+            {
+                var methodsSection = GenerateMethods(className, methods, generationTemplate);
+                members = new List<MemberDeclarationSyntax>();
+                members.AddRange(methodsSection);
+            }
             Dictionary<int, Func<ClassDeclarationSyntax>> testClassDeclDict = new Dictionary<int, Func<ClassDeclarationSyntax>>()
             {
                 {1,  () => { return SyntaxFactory.ClassDeclaration($"{className}Tests")
@@ -163,12 +172,12 @@ namespace TestsGenerator.Core
                 .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
                     .WithBody(SyntaxFactory.Block(initializations)); } },
                 {2, () => { return SyntaxFactory.ConstructorDeclaration(
-                                SyntaxFactory.Identifier(className))
+                                SyntaxFactory.Identifier(className + "Tests"))
                                     //SyntaxFactory.IdentifierName($"{setupDeclDict.TryGetValue}"))))))
                     .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
                     .WithBody(SyntaxFactory.Block(initializations)); } },
                 {3, () => { return SyntaxFactory.ConstructorDeclaration(
-                                SyntaxFactory.Identifier(className))
+                                SyntaxFactory.Identifier(className + "Tests"))
                                     //SyntaxFactory.IdentifierName($"{setupDeclDict.TryGetValue}"))))))
                     .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
                     .WithBody(SyntaxFactory.Block(initializations)); } }
