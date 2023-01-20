@@ -1,4 +1,4 @@
-using NUnit.Framework;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
@@ -7,12 +7,11 @@ using TestsGenerator.Core;
 
 namespace Tests
 {
-    [TestFixture]
+    [TestClass]
     public class MethodNameGenerationInfoTests
     {
         private MethodNameGenerationInfo _testMethodNameGenerationInfoTests;
-        [SetUp]
-        public void SetUp()
+        public MethodNameGenerationInfoTests()
         {
             int methodsWithTheSameNameCountFake = default;
             _testMethodNameGenerationInfoTests = new MethodNameGenerationInfo(methodsWithTheSameNameCountFake);
